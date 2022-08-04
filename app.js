@@ -1,10 +1,9 @@
-
-
+require('dotenv').config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require('mongoose');
 const date = require(__dirname + "/date.js");
-const _ =require("lodash");
+const _ = require("lodash");
 
 const app = express();
 
@@ -15,9 +14,9 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(express.static("public"));
 
- // const items = ["Buy Food", "Cook Food", "Eat Food"];
- // const workItems = [];
-mongoose.connect("mongodb+srv://admin-harish:Harish2306@cluster0.i206w3c.mongodb.net/todolistDB", {
+// const items = ["Buy Food", "Cook Food", "Eat Food"];
+// const workItems = [];
+mongoose.connect(process.env.DBNAME, {
   useNewUrlParser: true
 });
 
@@ -41,12 +40,12 @@ const item3 = new Item({
 
 const defaultItems = [item1, item2, item3];
 
-const listSchema={
-  name:String,
-  items:[itemSchema]
+const listSchema = {
+  name: String,
+  items: [itemSchema]
 };
 
-const List=mongoose.model("List",listSchema);
+const List = mongoose.model("List", listSchema);
 
 app.get("/", function(req, res) {
 
@@ -54,8 +53,7 @@ app.get("/", function(req, res) {
 
   Item.find({}, function(err, foundItems) {
     //console.log(foundItems);
-    if(foundItems.length===0)
-    {
+    if (foundItems.length === 0) {
       Item.insertMany(defaultItems, function(err) {
         if (err) {
           console.log(err);
@@ -63,38 +61,37 @@ app.get("/", function(req, res) {
           console.log("Successfully saved default items to DB.");
         }
       });
-       res.redirect("/");
-    }
-    else{
-        res.render("list", {
-          listTitle: "Today",
-          newListItems: foundItems
+      res.redirect("/");
+    } else {
+      res.render("list", {
+        listTitle: "Today",
+        newListItems: foundItems
       });
     }
   });
 });
 
-app.get("/:customListName",function(req,res)
-{
-  const customListName=_.capitalize(req.params.customListName);
+app.get("/:customListName", function(req, res) {
+  const customListName = _.capitalize(req.params.customListName);
 
-  List.findOne({name:customListName},function(err,foundList){
-    if(!err){
-      if(!foundList){
+  List.findOne({
+    name: customListName
+  }, function(err, foundList) {
+    if (!err) {
+      if (!foundList) {
         //create a new list
-        const list=new List({
-          name:customListName,
-          items:defaultItems
+        const list = new List({
+          name: customListName,
+          items: defaultItems
         });
         list.save();
-        res.redirect("/"+customListName);
-      }
-      else {
+        res.redirect("/" + customListName);
+      } else {
         //show an existing list
         res.render("list", {
           listTitle: foundList.name,
           newListItems: foundList.items
-      });
+        });
       }
     }
   });
@@ -105,46 +102,52 @@ app.get("/:customListName",function(req,res)
 app.post("/", function(req, res) {
 
   const itemName = req.body.newItem;
-  const listName=req.body.list;
-  const item=new Item({
-    name:itemName
+  const listName = req.body.list;
+  const item = new Item({
+    name: itemName
   });
-  if(listName=="Today"){
+  if (listName == "Today") {
     item.save();
     res.redirect("/");
-  }
-  else{
-    List.findOne({name:listName},function(err,foundList){
+  } else {
+    List.findOne({
+      name: listName
+    }, function(err, foundList) {
       foundList.items.push(item);
       foundList.save();
-      res.redirect("/"+listName);
+      res.redirect("/" + listName);
     });
   }
 });
 
-app.post("/delete",function(req,res){
-  const checkedItemId=req.body.checkbox;
-  const listName=req.body.listName;
+app.post("/delete", function(req, res) {
+  const checkedItemId = req.body.checkbox;
+  const listName = req.body.listName;
 
-  if(listName==="Today"){
-    Item.findByIdAndRemove(checkedItemId,function(err){
-      if(err){
+  if (listName === "Today") {
+    Item.findByIdAndRemove(checkedItemId, function(err) {
+      if (err) {
         console.log(err);
-      }
-      else{
+      } else {
         console.log("Successfully deleted checked item");
         res.redirect("/");
       }
     });
-  }else{
-    List.findOneAndUpdate({name:listName},{$pull:{items:{_id:checkedItemId}}},function(err,foundList){
-      if(!err){
-        res.redirect("/"+listName);
+  } else {
+    List.findOneAndUpdate({
+      name: listName
+    }, {
+      $pull: {
+        items: {
+          _id: checkedItemId
+        }
+      }
+    }, function(err, foundList) {
+      if (!err) {
+        res.redirect("/" + listName);
       }
     });
   }
-
-
 });
 
 // app.get("/work", function(req, res) {
